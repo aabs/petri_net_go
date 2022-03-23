@@ -39,11 +39,22 @@ func (p *PetriNetBuilder) WithPlace(pl Place) *PetriNetBuilder {
 	p.Places = append(p.Places, pl)
 	return p
 }
+func (p *PetriNetBuilder) WithPlaces(places map[PlaceId]string) *PetriNetBuilder {
+	for pid, name := range places {
+		p.WithPlace(Place{pid, name})
+	}
+	return p
+}
 func (p *PetriNetBuilder) WithTransition(t Transition) *PetriNetBuilder {
 	p.Transitions = append(p.Transitions, t)
 	return p
 }
-
+func (p *PetriNetBuilder) WithTransitions(transitions map[TransitionId]string) *PetriNetBuilder {
+	for pid, name := range transitions {
+		p.WithTransition(Transition{pid, name})
+	}
+	return p
+}
 func (p *PetriNetBuilder) WithInArc(pid PlaceId, tid TransitionId) *PetriNetBuilder {
 	p.InputIncidence = append(p.InputIncidence, Arc{pid, tid})
 	return p

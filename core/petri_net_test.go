@@ -70,13 +70,8 @@ func Test_PetriNetBuilder_Create(t *testing.T) {
 func CreateTestNet() (*PetriNet, error) {
 	return CreatePetriNet().
 		Called("PT").
-		WithPlace(*CreatePlace().WithId(P1).Called("P1").Build()).
-		WithPlace(*CreatePlace().WithId(P2).Called("P2").Build()).
-		WithPlace(*CreatePlace().WithId(P3).Called("P3").Build()).
-		WithPlace(*CreatePlace().WithId(P4).Called("P4").Build()).
-		WithTransition(*CreateTransition().WithId(T1).Called("T1").Build()).
-		WithTransition(*CreateTransition().WithId(T2).Called("T2").Build()).
-		WithTransition(*CreateTransition().WithId(T3).Called("T3").Build()).
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "P4"}).
+		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2", T3: "T3"}).
 		WithInArcs(map[PlaceId][]TransitionId{P1: {T2, T3}, P2: {T1}, P3: {T1}, P4: {T3, T3}}).
 		WithOutArcs(map[PlaceId][]TransitionId{P1: {T1}, P2: {T2}, P3: {T3}, P4: {T2, T2}}).
 		Build()
@@ -104,31 +99,41 @@ func Test_PetriNet_StateEqn_1(t *testing.T) {
 	testErr(err, t)
 	marking := CreateMarking(4, []int{2, 0, 1, 0})
 
-	firingList, err := net.GetFiringList(marking)
+	firingList, err := net.GetEligibleFiringList(marking)
 	testErr(err, t)
-	testBool(firingList.Len() == 3, t)
-	testBool(firingList.At(0, 0) == 0, t)
-	testBool(firingList.At(1, 0) == 0, t)
-	testBool(firingList.At(2, 0) == 1, t)
+	assert.Equal(t, firingList.Len(), 3, "")
+	assert.Equal(t, firingList.At(0, 0), 0, "")
+	assert.Equal(t, firingList.At(1, 0), 0, "")
+	assert.Equal(t, firingList.At(2, 0), 1, "")
+}
+func Test_PetriNet_GetEligibleFiringList(t *testing.T) {
+	net, err := CreateTestNet()
+	testErr(err, t)
+	marking := CreateMarking(4, []int{2, 0, 1, 0})
+
+	firingList, err := net.GetEligibleFiringList(marking)
+	testErr(err, t)
+	assert.Equal(t, firingList.Len(), 3, "")
+	assert.Equal(t, firingList.At(0, 0), 1.0, "")
+	assert.Equal(t, firingList.At(1, 0), 0.0, "")
+	assert.Equal(t, firingList.At(2, 0), 1.0, "")
+	marking2 := CreateMarking(4, []int{0, 1, 0, 2})
+
+	firingList2, _ := net.GetEligibleFiringList(marking2)
+	testErr(err, t)
+	assert.Equal(t, firingList2.Len(), 3, "")
+	assert.Equal(t, firingList2.At(0, 0), 0.0, "")
+	assert.Equal(t, firingList2.At(1, 0), 1.0, "")
+	assert.Equal(t, firingList2.At(2, 0), 0.0, "")
 }
 
 func Test_PetriNet_StateEqn_2(t *testing.T) {
 	// arrange
 	net, _ := CreateTestNet()
 	marking := CreateMarking(4, []int{2, 0, 1, 0})
-	firingList, _ := net.GetFiringList(marking)
-	assert.Equal(t, 2.0, marking.Places.AtVec(0), "initial marking")
-	assert.Equal(t, 0.0, marking.Places.AtVec(1), "initial marking")
-	assert.Equal(t, 1.0, marking.Places.AtVec(2), "initial marking")
-	assert.Equal(t, 0.0, marking.Places.AtVec(3), "initial marking")
-
-	// act
-	newMarking, err := net.Fire(marking, firingList)
-
-	// assert
+	firingList, _ := net.GetEligibleFiringList(marking)
+	chosenTransition, err := net.ChooseTransitionFromEligibleFiringList(firingList)
 	testErr(err, t)
-	assert.Equal(t, 3.0, newMarking.Places.AtVec(0), "marking should have moved")
-	assert.Equal(t, 0.0, newMarking.Places.AtVec(1), "marking should have moved")
-	assert.Equal(t, 0.0, newMarking.Places.AtVec(2), "marking should have moved")
-	assert.Equal(t, 2.0, newMarking.Places.AtVec(3), "marking should have moved")
+	assert.True(t, chosenTransition.At(0, 0) == 1.0 || chosenTransition.At(2, 0) == 1.0, "only T1 or T3 should have been chosen")
+	assert.True(t, chosenTransition.At(1, 0) == 0.0, "T2 should never have been chosen")
 }
