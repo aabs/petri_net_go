@@ -45,7 +45,7 @@ func Test_PlaceBuilder_Called(t *testing.T) {
 func Test_TransitionBuilder_Create(t *testing.T) {
 	sut := CreateTransition()
 
-	if sut.Id != 1 {
+	if sut.Id != 0 {
 		t.Error(sut)
 	}
 }
@@ -102,7 +102,7 @@ func Test_PetriNetBuilder_FullCreate(t *testing.T) {
 func Test_PetriNet_StateEqn_1(t *testing.T) {
 	net, err := CreateTestNet()
 	testErr(err, t)
-	marking := CreateMarking(4, []int{2, 0, 1, 0, })
+	marking := CreateMarking(4, []int{2, 0, 1, 0})
 
 	firingList, err := net.GetFiringList(marking)
 	testErr(err, t)
@@ -115,16 +115,20 @@ func Test_PetriNet_StateEqn_1(t *testing.T) {
 func Test_PetriNet_StateEqn_2(t *testing.T) {
 	// arrange
 	net, _ := CreateTestNet()
-	marking := CreateMarking(4, []int{2, 0, 1, 0, })
+	marking := CreateMarking(4, []int{2, 0, 1, 0})
 	firingList, _ := net.GetFiringList(marking)
-	assert.Equal(t, 1.0, marking.Places.AtVec(0), "initial marking")
+	assert.Equal(t, 2.0, marking.Places.AtVec(0), "initial marking")
 	assert.Equal(t, 0.0, marking.Places.AtVec(1), "initial marking")
+	assert.Equal(t, 1.0, marking.Places.AtVec(2), "initial marking")
+	assert.Equal(t, 0.0, marking.Places.AtVec(3), "initial marking")
 
 	// act
 	newMarking, err := net.Fire(marking, firingList)
 
 	// assert
 	testErr(err, t)
-	assert.Equal(t, 0.0, newMarking.Places.AtVec(0), "marking should have moved")
-	assert.Equal(t, 1.0, newMarking.Places.AtVec(1), "marking should have moved")
+	assert.Equal(t, 3.0, newMarking.Places.AtVec(0), "marking should have moved")
+	assert.Equal(t, 0.0, newMarking.Places.AtVec(1), "marking should have moved")
+	assert.Equal(t, 0.0, newMarking.Places.AtVec(2), "marking should have moved")
+	assert.Equal(t, 2.0, newMarking.Places.AtVec(3), "marking should have moved")
 }
