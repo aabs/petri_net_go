@@ -6,12 +6,14 @@ import "gonum.org/v1/gonum/mat"
  * Building Petri Nets
  */
 
+// for adjacency matrices the layout is places are rows, and transitions are columns
+
 type PetriNetBuilder struct {
 	Name                     string
 	Version                  string
-	InputIncidence           []Pair[int, int]
-	OutputIncidence          []Pair[int, int]
-	InhibitoryInputIncidence []Pair[int, int]
+	InputIncidence           []Arc
+	OutputIncidence          []Arc
+	InhibitoryInputIncidence []Arc
 	Places                   []Place
 	Transitions              []Transition
 }
@@ -42,17 +44,46 @@ func (p *PetriNetBuilder) WithTransition(t Transition) *PetriNetBuilder {
 	return p
 }
 
-func (p *PetriNetBuilder) WithInArc(arc Pair[int, int]) *PetriNetBuilder {
-	p.InputIncidence = append(p.InputIncidence, arc)
+func (p *PetriNetBuilder) WithInArc(pid PlaceId, tid TransitionId) *PetriNetBuilder {
+	p.InputIncidence = append(p.InputIncidence, Arc{pid, tid})
 	return p
 }
 
-func (p *PetriNetBuilder) WithOutArc(arc Pair[int, int]) *PetriNetBuilder {
-	p.OutputIncidence = append(p.OutputIncidence, arc)
+func (p *PetriNetBuilder) WithInArcs(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
+	//p.InputIncidence = append(p.InputIncidence, Arc{pid, tid})
+	for pid, tids := range arcs {
+		for _, tid := range tids {
+			p.WithInArc(pid, tid)
+		}
+	}
 	return p
 }
-func (p *PetriNetBuilder) WithInhibitorArc(arc Pair[int, int]) *PetriNetBuilder {
-	p.InhibitoryInputIncidence = append(p.InhibitoryInputIncidence, arc)
+
+func (p *PetriNetBuilder) WithOutArc(tid TransitionId, pid PlaceId) *PetriNetBuilder {
+	p.OutputIncidence = append(p.OutputIncidence, Arc{pid, tid})
+	return p
+}
+
+func (p *PetriNetBuilder) WithOutArcs(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
+	for pid, tids := range arcs {
+		for _, tid := range tids {
+			p.WithOutArc(tid, pid)
+		}
+	}
+	return p
+}
+
+func (p *PetriNetBuilder) WithInhibitorArc(pid PlaceId, tid TransitionId) *PetriNetBuilder {
+	p.InhibitoryInputIncidence = append(p.InhibitoryInputIncidence, Arc{pid, tid})
+	return p
+}
+
+func (p *PetriNetBuilder) WithInhibitorArcs(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
+	for pid, tids := range arcs {
+		for _, tid := range tids {
+			p.WithInhibitorArc(pid, tid)
+		}
+	}
 	return p
 }
 
@@ -67,10 +98,18 @@ func (p *PetriNetBuilder) BuildInputIncidenceMatrix() []float64 {
 
 	// set input arcs to 1
 	for _, arc := range p.InputIncidence {
-		result[(arc.Item1-1)*number_of_places+(arc.Item2-1)] = 1
+		row, col := getArrayOffset(arc)
+		offset := row*number_of_transitions + (col)
+		result[offset] = result[offset] + 1
 	}
 
 	return result
+}
+
+func getArrayOffset(arc Arc) (int, int) {
+	row := int(arc.Place)
+	col := int(arc.Transition)
+	return row, col
 }
 
 func (p *PetriNetBuilder) BuildOutputIncidenceMatrix() []float64 {
@@ -84,7 +123,9 @@ func (p *PetriNetBuilder) BuildOutputIncidenceMatrix() []float64 {
 
 	// set input arcs to 1
 	for _, arc := range p.OutputIncidence {
-		result[(arc.Item1-1)*number_of_places+(arc.Item2-1)] = 1
+		row, col := getArrayOffset(arc)
+		offset := row*number_of_transitions + (col)
+		result[offset] = result[offset] + 1
 	}
 
 	return result
@@ -101,7 +142,9 @@ func (p *PetriNetBuilder) BuildInhibitoryInputIncidenceMatrix() []float64 {
 
 	// set input arcs to 1
 	for _, arc := range p.InhibitoryInputIncidence {
-		result[(arc.Item1-1)*number_of_places+(arc.Item2-1)] = 1
+		row, col := getArrayOffset(arc)
+		offset := row*number_of_transitions + (col)
+		result[offset] = result[offset] + 1
 	}
 
 	return result

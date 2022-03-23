@@ -17,30 +17,30 @@ type PetriNet struct {
 	TransitionNames          map[int]string
 }
 
+type PlaceId int
+type TransitionId int
+
+type Arc struct {
+	Place      PlaceId
+	Transition TransitionId
+}
+
 func (net *PetriNet) GetFiringList(marking Marking) (*mat.VecDense, error) {
 	number_of_transitions := len(net.TransitionNames)
-	firings := convertTo64([]int{1})
+	firings := ConvertToFloat64([]int{0, 0, 1})
 	return mat.NewVecDense(number_of_transitions, firings), nil
 }
 
-type Marking struct {
-	Places mat.Vector
-}
-
-func convertTo64(ar []int) []float64 {
-	newar := make([]float64, len(ar))
-	var v int
-	var i int
-	for i, v = range ar {
-		newar[i] = float64(v)
-	}
-	return newar
-}
-
-
-func CreateMarking(size int, markings []int) Marking {
-	places := mat.NewVecDense(size, convertTo64(markings))
-	return Marking{
-		Places: places,
-	}
+func (net *PetriNet) Fire(m_0 Marking, firingList *mat.VecDense) (*Marking, error) {
+	var A mat.Dense
+	A.Sub(net.InputIncidence, net.OutputIncidence)
+	//AT := A.T()
+	var d mat.VecDense
+	d.MulVec(&A, firingList)
+	var m_1 mat.VecDense
+	m_1.AddVec(m_0.Places, &d)
+	//newMarking := m_0 + (net.InputIncidence - net.OutputIncidence ) * firingList
+	return &Marking{
+		Places: &m_1,
+	}, nil
 }

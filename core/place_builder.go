@@ -1,26 +1,26 @@
 package core
 
-var placeIdGenerator int = 0
-
 type Place struct {
-	Id   int
+	Id   PlaceId
 	Name string
 }
 
 type PlaceBuilder struct {
-	Id   int
+	Id   PlaceId
 	Name string
 }
 
 func CreatePlace() *PlaceBuilder {
-	placeIdGenerator++
-	return &PlaceBuilder{
-		Id: placeIdGenerator,
-	}
+	return &PlaceBuilder{}
 }
 
 func (p *PlaceBuilder) Called(name string) *PlaceBuilder {
 	p.Name = name
+	return p
+}
+
+func (p *PlaceBuilder) WithId(id PlaceId) *PlaceBuilder {
+	p.Id = id
 	return p
 }
 
