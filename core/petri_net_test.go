@@ -102,9 +102,9 @@ func Test_PetriNet_StateEqn_1(t *testing.T) {
 	firingList, err := net.GetEligibleFiringList(marking)
 	testErr(err, t)
 	assert.Equal(t, firingList.Len(), 3, "")
-	assert.Equal(t, firingList.At(0, 0), 0, "")
-	assert.Equal(t, firingList.At(1, 0), 0, "")
-	assert.Equal(t, firingList.At(2, 0), 1, "")
+	assert.Equal(t, firingList.At(0, 0), 1.0, "")
+	assert.Equal(t, firingList.At(1, 0), 0.0, "")
+	assert.Equal(t, firingList.At(2, 0), 1.0, "")
 }
 func Test_PetriNet_GetEligibleFiringList(t *testing.T) {
 	net, err := CreateTestNet()
