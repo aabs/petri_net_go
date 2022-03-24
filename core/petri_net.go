@@ -3,6 +3,7 @@
 package core
 
 import (
+	"errors"
 	"math/rand"
 
 	"gonum.org/v1/gonum/mat"
@@ -17,6 +18,7 @@ type PetriNet struct {
 	InhibitoryInputIncidence mat.Matrix
 	PlaceNames               map[int]string
 	TransitionNames          map[int]string
+	TransitionHandlers       map[TransitionId]func(TransitionId, *Marking, *Marking)
 }
 
 type PlaceId int
@@ -48,6 +50,13 @@ func (net *PetriNet) GetEligibleFiringList(marking Marking) (*mat.VecDense, erro
 
 	return mat.NewVecDense(numTransitions, firingList), nil
 }
+func CountEnabledTransitions(firingList *mat.VecDense) int {
+	count := 0
+	for i := 0; i < firingList.Len(); i++ {
+		count += int(firingList.AtVec(i))
+	}
+	return count
+}
 
 func (net *PetriNet) ChooseTransitionFromEligibleFiringList(fullFiringList *mat.VecDense) (*mat.VecDense, error) {
 	numTransitions := len(net.TransitionNames)
@@ -59,15 +68,12 @@ func (net *PetriNet) ChooseTransitionFromEligibleFiringList(fullFiringList *mat.
 	// and all the other enabled transitions set to 0.0.
 	// if no transition is enabled, we have deadlock, but this function can do nothing about it.
 
-	enabledCount := 0
-	for i := 0; i < numTransitions; i++ {
-		enabledCount += int(fullFiringList.AtVec(i))
-	}
+	enabledCount := CountEnabledTransitions(fullFiringList)
 	if enabledCount == 1 {
 		return mat.NewVecDense(numTransitions, firingList), nil
 	} else if enabledCount > 1 {
 		// randomly choose one of the enabled transitions
-		enabledTransitionsToDiscard := rand.Intn(enabledCount+1)
+		enabledTransitionsToDiscard := rand.Intn(enabledCount + 1)
 
 		for i := 0; i < numTransitions; i++ {
 			if fullFiringList.AtVec(i) == 1.0 {
@@ -84,7 +90,23 @@ func (net *PetriNet) ChooseTransitionFromEligibleFiringList(fullFiringList *mat.
 	return mat.NewVecDense(numTransitions, firingList), nil
 }
 
-func (net *PetriNet) Fire(m_0 Marking, firingList *mat.VecDense) (*Marking, error) {
+func (net *PetriNet) Fire(m_0 *Marking, firingList *mat.VecDense) (*Marking, error) {
+	m_1, err := net.CalculateNextMarking(m_0, firingList)
+	if err != nil {
+		return m_1, err
+	}
+	var t TransitionId
+	t, err = net.SelectTidOfChosenTransition(firingList)
+	if err != nil {
+		return m_1, err
+	}
+	handler := net.TransitionHandlers[t]
+	handler(t, m_0, m_1)
+	return m_1, nil
+}
+
+func (net *PetriNet) CalculateNextMarking(m_0 *Marking, firingList *mat.VecDense) (*Marking, error) {
+
 	var A mat.Dense
 	A.Sub(net.InputIncidence, net.OutputIncidence)
 	//AT := A.T()
@@ -96,4 +118,13 @@ func (net *PetriNet) Fire(m_0 Marking, firingList *mat.VecDense) (*Marking, erro
 	return &Marking{
 		Places: &m_1,
 	}, nil
+}
+
+func (net *PetriNet) SelectTidOfChosenTransition(firingList *mat.VecDense) (TransitionId, error) {
+	for i := 0; i < firingList.Len(); i++ {
+		if firingList.AtVec(i) == 1.0 {
+			return TransitionId(i), nil
+		}
+	}
+	return -1, errors.New("net is dead")
 }

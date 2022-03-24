@@ -137,3 +137,28 @@ func Test_PetriNet_StateEqn_2(t *testing.T) {
 	assert.True(t, chosenTransition.At(0, 0) == 1.0 || chosenTransition.At(2, 0) == 1.0, "only T1 or T3 should have been chosen")
 	assert.True(t, chosenTransition.At(1, 0) == 0.0, "T2 should never have been chosen")
 }
+
+func Test_PetriNet_InvokesTransitionHandler(t *testing.T) {
+	testCounter := 0
+	sut, err := CreatePetriNet().
+		Called("PT").
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2"}).
+		WithTransitions(map[TransitionId]string{T1: "T1"}).
+		WithTransitionHandler(T1, func(tid TransitionId, m_0 *Marking, m_1 *Marking) { testCounter++ }).
+		WithInArcs(map[PlaceId][]TransitionId{P2: {T1}}).
+		WithOutArcs(map[PlaceId][]TransitionId{P1: {T1}}).
+		Build()
+	testErr(err, t)
+	m := CreateMarking(2, []int{1, 0})
+
+	u, err2 := sut.GetEligibleFiringList(m)
+	assert.Nil(t, err2)
+	assert.NotNil(t, u)
+	assert.Equal(t, testCounter, 0)
+
+	var m_1 *Marking
+	m_1, err = sut.Fire(&m, u)
+	assert.Nil(t, err)
+	assert.NotNil(t, m_1)
+	assert.Equal(t, testCounter, 1)
+}

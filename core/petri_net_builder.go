@@ -16,12 +16,14 @@ type PetriNetBuilder struct {
 	InhibitoryInputIncidence []Arc
 	Places                   []Place
 	Transitions              []Transition
+	TransitionHandlers       map[TransitionId]func(TransitionId, *Marking, *Marking)
 }
 
 func CreatePetriNet() *PetriNetBuilder {
 	return &PetriNetBuilder{
-		Places:      []Place{},
-		Transitions: []Transition{},
+		Places:             []Place{},
+		Transitions:        []Transition{},
+		TransitionHandlers: make(map[TransitionId]func(TransitionId, *Marking, *Marking)),
 	}
 }
 
@@ -182,5 +184,11 @@ func (p *PetriNetBuilder) Build() (*PetriNet, error) {
 		InhibitoryInputIncidence: mat.NewDense(number_of_places, number_of_transitions, p.BuildInhibitoryInputIncidenceMatrix()),
 		PlaceNames:               pl_names,
 		TransitionNames:          tr_names,
+		TransitionHandlers:       p.TransitionHandlers,
 	}, nil
+}
+
+func (p *PetriNetBuilder) WithTransitionHandler(tid TransitionId, handler func(tid TransitionId, m_0 *Marking, m_1 *Marking)) *PetriNetBuilder {
+	p.TransitionHandlers[tid] = handler
+	return p
 }
