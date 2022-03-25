@@ -1,13 +1,19 @@
 package core
 
-import "gonum.org/v1/gonum/mat"
+import (
+	"math"
+
+	"gonum.org/v1/gonum/mat"
+)
 
 /*
  * Building Petri Nets
  */
 
-// for adjacency matrices the layout is places are rows, and transitions are columns
-
+// For adjacency matrices the layout is places are rows, and transitions are columns
+// Terminology:
+//	 In, Into:  This means arcs going into a place
+//	 Out:  This means arcs going out of a place
 type PetriNetBuilder struct {
 	Name                     string
 	Version                  string
@@ -57,30 +63,30 @@ func (p *PetriNetBuilder) WithTransitions(transitions map[TransitionId]string) *
 	}
 	return p
 }
-func (p *PetriNetBuilder) WithInArc(pid PlaceId, tid TransitionId) *PetriNetBuilder {
+func (p *PetriNetBuilder) WithArcIntoPlace(pid PlaceId, tid TransitionId) *PetriNetBuilder {
 	p.InputIncidence = append(p.InputIncidence, Arc{pid, tid})
 	return p
 }
 
-func (p *PetriNetBuilder) WithInArcs(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
+func (p *PetriNetBuilder) WithArcsIntoPlaces(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
 	//p.InputIncidence = append(p.InputIncidence, Arc{pid, tid})
 	for pid, tids := range arcs {
 		for _, tid := range tids {
-			p.WithInArc(pid, tid)
+			p.WithArcIntoPlace(pid, tid)
 		}
 	}
 	return p
 }
 
-func (p *PetriNetBuilder) WithOutArc(tid TransitionId, pid PlaceId) *PetriNetBuilder {
+func (p *PetriNetBuilder) WithArcOutOfPlace(tid TransitionId, pid PlaceId) *PetriNetBuilder {
 	p.OutputIncidence = append(p.OutputIncidence, Arc{pid, tid})
 	return p
 }
 
-func (p *PetriNetBuilder) WithOutArcs(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
+func (p *PetriNetBuilder) WithArcsOutOfPlaces(arcs map[PlaceId][]TransitionId) *PetriNetBuilder {
 	for pid, tids := range arcs {
 		for _, tid := range tids {
-			p.WithOutArc(tid, pid)
+			p.WithArcOutOfPlace(tid, pid)
 		}
 	}
 	return p
@@ -145,19 +151,27 @@ func (p *PetriNetBuilder) BuildOutputIncidenceMatrix() []float64 {
 }
 
 func (p *PetriNetBuilder) BuildInhibitoryInputIncidenceMatrix() []float64 {
+	// A Note on inhibition arcs.
+	// Ideally, non-existent inhibitory links should have a weight of infinity, but we are limited to using Max Float64 as an approximation.
+	// therefore the weight of an inhibitory arc will always outweight the marking of the pre-place it comes from.
+
 	number_of_places := len(p.Places)
 	number_of_transitions := len(p.Transitions)
 	result := make([]float64, number_of_places*number_of_transitions)
 	// initialize result with zeros
 	for i := range result {
-		result[i] = 0
+		result[i] = math.MaxFloat64
 	}
 
 	// set input arcs to 1
 	for _, arc := range p.InhibitoryInputIncidence {
 		row, col := getArrayOffset(arc)
 		offset := row*number_of_transitions + (col)
-		result[offset] = result[offset] + 1
+		if result[offset] == math.MaxFloat64 {
+			result[offset] = 1
+		} else {
+			result[offset] = result[offset] + 1			
+		}
 	}
 
 	return result

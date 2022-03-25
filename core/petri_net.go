@@ -29,6 +29,28 @@ type Arc struct {
 	Transition TransitionId
 }
 
+func ComputeVectorOfInhibitedTransitions(m Marking, p *PetriNet) *mat.VecDense {
+	// if the token in the marking is equal to or greater than the weight of the inhibitory arc (which defaults ot max float64) then assign true otherwise false
+	inhibs := p.InhibitoryInputIncidence.(*mat.Dense)
+	numPlaces, numTransitions := p.InhibitoryInputIncidence.Dims()
+	result := make([]float64, numTransitions)	
+	m_0 := mat.VecDenseCopyOf(m.Places)
+	
+	for i := 0; i < numTransitions; i++ {
+		var m_t mat.VecDense
+		m_t.SubVec(m_0, inhibs.ColView(i))
+		isInhibited := 0.0
+		for j := 0; j < numPlaces; j++ {
+			if m_t.AtVec(j) >= 0 {
+				isInhibited = 1.0
+			}
+		}
+		result[i] = isInhibited
+	}
+
+	return mat.NewVecDense(numTransitions, result)
+}
+
 func (net *PetriNet) GetEligibleFiringList(marking Marking) (*mat.VecDense, error) {
 	numPlaces := marking.Places.Len()
 	numTransitions := len(net.TransitionNames)
@@ -47,8 +69,11 @@ func (net *PetriNet) GetEligibleFiringList(marking Marking) (*mat.VecDense, erro
 		}
 		firingList[t] = boolAsFloat
 	}
-
-	return mat.NewVecDense(numTransitions, firingList), nil
+	inhibitedTransitions := ComputeVectorOfInhibitedTransitions(marking, net)
+	firingListVector := mat.NewVecDense(numTransitions, firingList)
+	var result mat.VecDense
+	result.SubVec(firingListVector, inhibitedTransitions)
+	return &result, nil
 }
 func CountEnabledTransitions(firingList *mat.VecDense) int {
 	count := 0

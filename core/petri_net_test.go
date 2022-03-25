@@ -72,8 +72,8 @@ func CreateTestNet() (*PetriNet, error) {
 		Called("PT").
 		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "P4"}).
 		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2", T3: "T3"}).
-		WithInArcs(map[PlaceId][]TransitionId{P1: {T2, T3}, P2: {T1}, P3: {T1}, P4: {T3, T3}}).
-		WithOutArcs(map[PlaceId][]TransitionId{P1: {T1}, P2: {T2}, P3: {T3}, P4: {T2, T2}}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P1: {T2, T3}, P2: {T1}, P3: {T1}, P4: {T3, T3}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1}, P2: {T2}, P3: {T3}, P4: {T2, T2}}).
 		Build()
 }
 
@@ -145,8 +145,8 @@ func Test_PetriNet_InvokesTransitionHandler(t *testing.T) {
 		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2"}).
 		WithTransitions(map[TransitionId]string{T1: "T1"}).
 		WithTransitionHandler(T1, func(tid TransitionId, m_0 *Marking, m_1 *Marking) { testCounter++ }).
-		WithInArcs(map[PlaceId][]TransitionId{P2: {T1}}).
-		WithOutArcs(map[PlaceId][]TransitionId{P1: {T1}}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P2: {T1}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1}}).
 		Build()
 	testErr(err, t)
 	m := CreateMarking(2, []int{1, 0})
@@ -161,4 +161,22 @@ func Test_PetriNet_InvokesTransitionHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, m_1)
 	assert.Equal(t, testCounter, 1)
+}
+
+func Test_PetriNet_InhibitorCausesTransitionToBeIgnored(t *testing.T) {
+	sut, _ := CreatePetriNet().
+		Called("PT").
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "PGuard"}).
+		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2"}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P2: {T1}, P3: {T2}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1, T2}}).
+		WithInhibitorArc(P4, T2).
+		Build()
+	m := CreateMarking(4, []int{1, 0, 0, 1})
+
+	u, err2 := sut.GetEligibleFiringList(m)
+	testErr(err2, t)
+	assert.Equal(t, u.Len(), 2, "only two transitions were defined")
+	assert.Equal(t, u.At(0, 0), 1.0, "this should have been enabled")
+	assert.Equal(t, u.At(1, 0), 0.0, "this transition should have been inhibited")
 }
