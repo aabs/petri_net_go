@@ -180,3 +180,57 @@ func Test_PetriNet_InhibitorCausesTransitionToBeIgnored(t *testing.T) {
 	assert.Equal(t, u.At(0, 0), 1.0, "this should have been enabled")
 	assert.Equal(t, u.At(1, 0), 0.0, "this transition should have been inhibited")
 }
+
+func Test_PetriNet_InhibitorCausesTransitionToBeIgnoredOnlyWhenTokensMeetThreshold1(t *testing.T) {
+	sut, _ := CreatePetriNet().
+		Called("PT").
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "PGuard"}).
+		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2"}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P2: {T1}, P3: {T2}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1, T2}}).
+		WithInhibitorArcs(map[PlaceId][]TransitionId{P4: {T2, T2}}). // i.e. a weight of two between P4 and T2
+		Build()
+	m := CreateMarking(4, []int{1, 0, 0, 1})
+
+	u, err2 := sut.GetEligibleFiringList(m)
+	testErr(err2, t)
+	assert.Equal(t, u.Len(), 2, "only two transitions were defined")
+	assert.Equal(t, u.At(0, 0), 1.0, "this should have been enabled")
+	assert.Equal(t, u.At(1, 0), 1.0, "this transition should have been inhibited")
+}
+
+func Test_PetriNet_InhibitorCausesTransitionToBeIgnoredOnlyWhenTokensMeetThreshold2(t *testing.T) {
+	sut, _ := CreatePetriNet().
+		Called("PT").
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "PGuard"}).
+		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2"}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P2: {T1}, P3: {T2}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1, T2}}).
+		WithInhibitorArcs(map[PlaceId][]TransitionId{P4: {T2, T2}}). // i.e. a weight of two between P4 and T2
+		Build()
+	m := CreateMarking(4, []int{1, 0, 0, 2})
+
+	u, err2 := sut.GetEligibleFiringList(m)
+	testErr(err2, t)
+	assert.Equal(t, u.Len(), 2, "only two transitions were defined")
+	assert.Equal(t, u.At(0, 0), 1.0, "this should have been enabled")
+	assert.Equal(t, u.At(1, 0), 0.0, "this transition should have been inhibited")
+}
+
+func Test_PetriNet_InhibitorCausesTransitionToBeIgnoredOnlyWhenTokensMeetThreshold3(t *testing.T) {
+	sut, _ := CreatePetriNet().
+		Called("PT").
+		WithPlaces(map[PlaceId]string{P1: "P1", P2: "P2", P3: "P3", P4: "PGuard"}).
+		WithTransitions(map[TransitionId]string{T1: "T1", T2: "T2"}).
+		WithArcsIntoPlaces(map[PlaceId][]TransitionId{P2: {T1}, P3: {T2}}).
+		WithArcsOutOfPlaces(map[PlaceId][]TransitionId{P1: {T1, T2}}).
+		WithInhibitorArcs(map[PlaceId][]TransitionId{P4: {T2, T2}}). // i.e. a weight of two between P4 and T2
+		Build()
+	m := CreateMarking(4, []int{1, 0, 0, 345})
+
+	u, err2 := sut.GetEligibleFiringList(m)
+	testErr(err2, t)
+	assert.Equal(t, u.Len(), 2, "only two transitions were defined")
+	assert.Equal(t, u.At(0, 0), 1.0, "this should have been enabled")
+	assert.Equal(t, u.At(1, 0), 0.0, "this transition should have been inhibited")
+}

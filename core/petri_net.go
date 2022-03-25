@@ -52,8 +52,7 @@ func ComputeVectorOfInhibitedTransitions(m Marking, p *PetriNet) *mat.VecDense {
 }
 
 func (net *PetriNet) GetEligibleFiringList(marking Marking) (*mat.VecDense, error) {
-	numPlaces := marking.Places.Len()
-	numTransitions := len(net.TransitionNames)
+	numPlaces, numTransitions := net.InputIncidence.Dims()
 	firingList := make([]float64, numTransitions, numTransitions)
 
 	for t := 0; t < numTransitions; t++ {
