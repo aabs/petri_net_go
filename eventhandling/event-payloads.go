@@ -1,4 +1,4 @@
-package persistence
+package eventhandling
 
 import (
 	"aabs/petri_net_go/core"
