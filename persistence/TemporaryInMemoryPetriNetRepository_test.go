@@ -25,15 +25,15 @@ func TestTemporaryInMemoryPetriNetRepository_InsertDefinition(t *testing.T) {
 				net: CreateTestDefinition(),
 			},
 			wantErr: false,
-			repo: NewTemporaryInMemoryPetriNetRepository(),
-		},		
+			repo:    NewTemporaryInMemoryPetriNetRepository(),
+		},
 		{
 			name: "will refuse store a nil petrinet",
 			args: args{
 				net: nil,
 			},
 			wantErr: true,
-			repo: NewTemporaryInMemoryPetriNetRepository(),
+			repo:    NewTemporaryInMemoryPetriNetRepository(),
 		},
 	}
 	for _, tt := range tests {
@@ -83,10 +83,10 @@ func TestTemporaryInMemoryPetriNetRepository_UpdateDefinition(t *testing.T) {
 	net.Name = "some new name"
 	net.Version = "1.0.1"
 	CheckNetEquality(t, result, net, false)
-	
+
 	err = sut.UpdateDefinition(net)
 	assert.Nil(t, err)
-	
+
 	result, err = sut.GetDefinition(net.Name, net.Version)
 	assert.Nil(t, err)
 	CheckNetEquality(t, result, net, true)
@@ -94,25 +94,16 @@ func TestTemporaryInMemoryPetriNetRepository_UpdateDefinition(t *testing.T) {
 }
 
 func TestTemporaryInMemoryPetriNetRepository_DeleteDefinition(t *testing.T) {
-	type args struct {
-		name    string
-		version string
-	}
-	tests := []struct {
-		name    string
-		repo    *TemporaryInMemoryPetriNetRepository
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.repo.DeleteDefinition(tt.args.name, tt.args.version); (err != nil) != tt.wantErr {
-				t.Errorf("TemporaryInMemoryPetriNetRepository.DeleteDefinition() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+	sut := NewTemporaryInMemoryPetriNetRepository()
+	net := CreateTestDefinition()
+	sut.InsertDefinition(net)
+
+	// act
+	result, err := sut.GetDefinition(net.Name, net.Version)
+
+	// assert
+	assert.Nil(t, err)
+	assert.NotNil(t, result)
 }
 
 func TestTemporaryInMemoryPetriNetRepository_InsertMarking(t *testing.T) {
@@ -126,6 +117,14 @@ func TestTemporaryInMemoryPetriNetRepository_InsertMarking(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
+		{
+			name: "can store a marking",
+			args: args{
+				net: CreateTestMarking(),
+			},
+			wantErr: false,
+			repo:    NewTemporaryInMemoryPetriNetRepository(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -149,9 +148,20 @@ func TestTemporaryInMemoryPetriNetRepository_GetMarking(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
+		{
+			name: "can store a marking",
+			args: args{
+				instanceId: "testId",
+				name:       "PT",
+			},
+			wantErr: false,
+			repo:    NewTemporaryInMemoryPetriNetRepository(),
+			want:    CreateTestMarking(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.repo.InsertMarking(tt.want)
 			got, err := tt.repo.GetMarking(tt.args.instanceId, tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("TemporaryInMemoryPetriNetRepository.GetMarking() error = %v, wantErr %v", err, tt.wantErr)
@@ -166,7 +176,7 @@ func TestTemporaryInMemoryPetriNetRepository_GetMarking(t *testing.T) {
 
 func TestTemporaryInMemoryPetriNetRepository_UpdateMarking(t *testing.T) {
 	type args struct {
-		net *core.Marking
+		marking *core.Marking
 	}
 	tests := []struct {
 		name    string
@@ -175,11 +185,32 @@ func TestTemporaryInMemoryPetriNetRepository_UpdateMarking(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
+		{
+			name: "can update a marking",
+			args: args{
+				marking: CreateTestMarking(),
+			},
+			wantErr: false,
+			repo:    NewTemporaryInMemoryPetriNetRepository(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.repo.UpdateMarking(tt.args.net); (err != nil) != tt.wantErr {
+			tt.repo.InsertMarking(tt.args.marking)
+			got, err := tt.repo.GetMarking(tt.args.marking.InstanceId, tt.args.marking.DefinitionName)
+			if !reflect.DeepEqual(got, tt.args.marking) {
+				t.Errorf("TemporaryInMemoryPetriNetRepository.GetMarking() = %v, want %v", got, tt.args.marking)
+			}
+
+			if (err != nil) != tt.wantErr {
 				t.Errorf("TemporaryInMemoryPetriNetRepository.UpdateMarking() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			m_1, err2 := got.SetMarking(int(p2), 12.3)
+			if err2 = tt.repo.UpdateMarking(m_1); (err2 != nil) != tt.wantErr {
+				t.Errorf("TemporaryInMemoryPetriNetRepository.UpdateMarking() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if reflect.DeepEqual(m_1, tt.args.marking) {
+				t.Errorf("TemporaryInMemoryPetriNetRepository.GetMarking() = %v, want %v", got, tt.args.marking)
 			}
 		})
 	}
@@ -235,4 +266,12 @@ func CreateTestDefinition() *core.PetriNet {
 		WithArcsOutOfPlaces(map[core.PlaceId][]core.TransitionId{p1: {t1}, p2: {t2}, p3: {t3}, p4: {t2, t2}}).
 		Build()
 	return result
+}
+
+func CreateTestMarking() *core.Marking {
+	result := core.CreateMarking(4, []int{2, 0, 1, 0})
+	result.InstanceId = "testId"
+	result.DefinitionName = "PT"
+	result.DefinitionVersion = "1.2.3"
+	return &result
 }
