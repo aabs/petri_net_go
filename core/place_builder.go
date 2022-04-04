@@ -1,8 +1,8 @@
 package core
 
 type Place struct {
-	Id   PlaceId
-	Name string
+	Id   PlaceId `json:"id"`
+	Name string  `json:"name"`
 }
 
 type PlaceBuilder struct {

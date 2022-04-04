@@ -25,17 +25,17 @@ type PlaceId int
 type TransitionId int
 
 type Arc struct {
-	Place      PlaceId
-	Transition TransitionId
+	Place      PlaceId      `json:"place"`
+	Transition TransitionId `json:"transition"`
 }
 
 func ComputeVectorOfInhibitedTransitions(m Marking, p *PetriNet) *mat.VecDense {
 	// if the token in the marking is equal to or greater than the weight of the inhibitory arc (which defaults ot max float64) then assign true otherwise false
 	inhibs := p.InhibitoryInputIncidence.(*mat.Dense)
 	numPlaces, numTransitions := p.InhibitoryInputIncidence.Dims()
-	result := make([]float64, numTransitions)	
+	result := make([]float64, numTransitions)
 	m_0 := mat.VecDenseCopyOf(m.Places)
-	
+
 	for i := 0; i < numTransitions; i++ {
 		var m_t mat.VecDense
 		m_t.SubVec(m_0, inhibs.ColView(i))

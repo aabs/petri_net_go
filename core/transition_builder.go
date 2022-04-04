@@ -1,8 +1,8 @@
 package core
 
 type Transition struct {
-	Id   TransitionId
-	Name string
+	Id   TransitionId `json:"id"`
+	Name string       `json:"name"`
 }
 
 type TransitionBuilder struct {
